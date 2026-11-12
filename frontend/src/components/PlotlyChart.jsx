@@ -8,11 +8,11 @@ export default function PlotlyChart({ data, layout, config, style, isDark = true
 
     const baseLayout = {
       autosize: true,
-      paper_bgcolor: isDark ? '#0f172a' : '#ffffff',
-      plot_bgcolor: isDark ? '#0f172a' : '#ffffff',
+      paper_bgcolor: 'transparent',
+      plot_bgcolor: 'transparent',
       font: {
         family: 'Inter, sans-serif',
-        color: isDark ? '#cbd5e1' : '#334155',
+        color: isDark ? '#94a3b8' : '#334155',
         size: 11
       },
       margin: { l: 45, r: 25, t: 35, b: 40 },
