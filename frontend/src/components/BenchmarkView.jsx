@@ -10,9 +10,11 @@ import {
   Layers,
   ArrowUpDown,
   CheckCircle2,
-  HardDrive
+  HardDrive,
+  Info
 } from 'lucide-react';
 import PlotlyChart from './PlotlyChart';
+import Tooltip from './Tooltip';
 
 export default function BenchmarkView({
   activeDatasetId,
@@ -96,11 +98,11 @@ export default function BenchmarkView({
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Benchmark Header */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-sky-500" />
+              <BarChart3 className="w-5 h-5 text-cyan-500" />
               Comparative Clustering Benchmark Suite
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -110,7 +112,7 @@ export default function BenchmarkView({
 
           <div className="flex items-center gap-3">
             {/* Cluster count input */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08] text-xs">
               <span className="text-slate-500">Clusters (k):</span>
               <input
                 type="number"
@@ -125,9 +127,9 @@ export default function BenchmarkView({
             {/* Customize MCDM weights */}
             <button
               onClick={() => setShowWeightsModal(!showWeightsModal)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08] transition cursor-pointer"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-sky-500" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-500" />
               <span>Weights</span>
             </button>
 
@@ -135,17 +137,17 @@ export default function BenchmarkView({
             <button
               onClick={handleRun}
               disabled={isBenchmarking}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white shadow-md shadow-sky-500/20 transition disabled:opacity-60"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 via-sky-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white shadow-lg shadow-cyan-500/25 transition disabled:opacity-60 cursor-pointer"
             >
               <Play className={`w-4 h-4 fill-current ${isBenchmarking ? 'animate-spin' : ''}`} />
-              <span>{isBenchmarking ? 'Benchmarking All 9...' : 'Run 9-Algorithm Benchmark'}</span>
+              <span>{isBenchmarking ? 'Benchmarking 9 Models...' : 'Run 9-Algorithm Benchmark'}</span>
             </button>
           </div>
         </div>
 
         {/* Weights Drawer / Panel */}
         {showWeightsModal && (
-          <div className="p-4 mb-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs grid grid-cols-1 sm:grid-cols-5 gap-3">
+          <div className="p-4 mb-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] text-xs grid grid-cols-1 sm:grid-cols-5 gap-3">
             <div>
               <div className="flex justify-between font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 <span>Silhouette</span>
@@ -158,7 +160,7 @@ export default function BenchmarkView({
                 step="0.05"
                 value={weights.silhouette}
                 onChange={(e) => setWeights({ ...weights, silhouette: parseFloat(e.target.value) })}
-                className="w-full accent-sky-500"
+                className="w-full accent-cyan-500"
               />
             </div>
             <div>
@@ -173,7 +175,7 @@ export default function BenchmarkView({
                 step="0.05"
                 value={weights.davies_bouldin}
                 onChange={(e) => setWeights({ ...weights, davies_bouldin: parseFloat(e.target.value) })}
-                className="w-full accent-sky-500"
+                className="w-full accent-cyan-500"
               />
             </div>
             <div>
@@ -188,7 +190,7 @@ export default function BenchmarkView({
                 step="0.05"
                 value={weights.calinski_harabasz}
                 onChange={(e) => setWeights({ ...weights, calinski_harabasz: parseFloat(e.target.value) })}
-                className="w-full accent-sky-500"
+                className="w-full accent-cyan-500"
               />
             </div>
             <div>
@@ -203,7 +205,7 @@ export default function BenchmarkView({
                 step="0.05"
                 value={weights.purity}
                 onChange={(e) => setWeights({ ...weights, purity: parseFloat(e.target.value) })}
-                className="w-full accent-sky-500"
+                className="w-full accent-cyan-500"
               />
             </div>
             <div>
@@ -218,7 +220,7 @@ export default function BenchmarkView({
                 step="0.05"
                 value={weights.time_efficiency}
                 onChange={(e) => setWeights({ ...weights, time_efficiency: parseFloat(e.target.value) })}
-                className="w-full accent-sky-500"
+                className="w-full accent-cyan-500"
               />
             </div>
           </div>
@@ -226,7 +228,7 @@ export default function BenchmarkView({
       </div>
 
       {/* Comparative Ranking Table */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -322,6 +324,10 @@ export default function BenchmarkView({
               {sortedResults.map((item) => {
                 const m = item.metrics || {};
                 const isChampion = item.rank === 1;
+                const evalInfo = (benchmarkData?.insights?.algorithm_evaluations || []).find(
+                  (e) => e.algorithm?.toLowerCase() === item.algorithm?.toLowerCase()
+                );
+
                 return (
                   <tr
                     key={item.algorithm}
@@ -339,11 +345,49 @@ export default function BenchmarkView({
                         {item.rank}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 font-sans font-bold text-slate-900 dark:text-white">
-                      {item.algorithm}
+                    <td className="py-2.5 px-3 font-sans">
+                      <Tooltip
+                        title={`${item.algorithm} Evaluation`}
+                        content={
+                          evalInfo ? (
+                            <div className="space-y-1 text-left font-sans">
+                              {evalInfo.strengths?.map((s, idx) => (
+                                <div key={idx} className="text-emerald-400 text-[10.5px] leading-tight">
+                                  + {s}
+                                </div>
+                              ))}
+                              {evalInfo.weaknesses?.map((w, idx) => (
+                                <div key={idx} className="text-rose-400 text-[10.5px] leading-tight">
+                                  - {w}
+                                </div>
+                              ))}
+                              <div className="text-slate-400 font-mono text-[10px] pt-1">
+                                Memory: {m.memory_kb || 0} KB • Latency: {m.execution_time_ms || 0} ms
+                              </div>
+                            </div>
+                          ) : 'Detailed performance metric profile.'
+                        }
+                        position="right"
+                        width="w-72"
+                      >
+                        <span className="font-bold text-slate-900 dark:text-white hover:text-sky-500 cursor-pointer flex items-center gap-1.5">
+                          {item.algorithm}
+                          <Info className="w-3 h-3 text-slate-400 opacity-60 hover:opacity-100" />
+                        </span>
+                      </Tooltip>
                     </td>
-                    <td className="py-2.5 px-3 font-bold text-sky-600 dark:text-sky-400">
-                      {item.composite_score?.toFixed(1)}
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sky-600 dark:text-sky-400 w-9">
+                          {item.composite_score?.toFixed(1)}
+                        </span>
+                        <div className="w-14 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden hidden sm:block">
+                          <div
+                            className="h-full bg-sky-500 rounded-full"
+                            style={{ width: `${Math.min(100, item.composite_score || 0)}%` }}
+                          />
+                        </div>
+                      </div>
                     </td>
                     <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300">
                       {m.silhouette_score !== null ? m.silhouette_score.toFixed(3) : 'N/A'}
@@ -383,9 +427,9 @@ export default function BenchmarkView({
       {/* Multi-Metric Radar Chart & Grouped Visualizations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Radar Chart */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-sky-500" />
+            <TrendingUp className="w-4 h-4 text-cyan-500" />
             Multi-Metric Radar Comparison (Top 4 Algorithms)
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
@@ -410,7 +454,7 @@ export default function BenchmarkView({
         </div>
 
         {/* Execution Time vs Silhouette Score Comparison */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
             <Clock className="w-4 h-4 text-emerald-500" />
             Silhouette Quality vs. Computational Latency

@@ -7,9 +7,20 @@ import {
   Grid,
   RefreshCw,
   TrendingDown,
-  Sparkles
+  Sparkles,
+  Info
 } from 'lucide-react';
 import PlotlyChart from './PlotlyChart';
+import Tooltip from './Tooltip';
+
+const ALGORITHM_OPTIONS = [
+  { id: 'kmeans', name: 'K-Means' },
+  { id: 'gmm', name: 'GMM' },
+  { id: 'agglomerative', name: 'Agglomerative' },
+  { id: 'spectral', name: 'Spectral' },
+  { id: 'kmedoids', name: 'K-Medoids' },
+  { id: 'fuzzy_cmeans', name: 'Fuzzy C-Means' }
+];
 
 export default function VisualizationsGallery({
   activeDatasetId,
@@ -82,7 +93,7 @@ export default function VisualizationsGallery({
 
     sil.clusters.forEach((c, idx) => {
       const yValues = c.values.map((_, i) => currentY + i);
-      currentY += c.values.length + 10; // gap
+      currentY += c.values.length + 10;
 
       traces.push({
         x: c.values,
@@ -152,42 +163,70 @@ export default function VisualizationsGallery({
     return traces;
   };
 
+  // Peak silhouette from sweep
+  const peakSilhouetteK = sweepData?.k_values && sweepData?.silhouette_scores
+    ? sweepData.k_values[sweepData.silhouette_scores.indexOf(Math.max(...sweepData.silhouette_scores))]
+    : null;
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <PieChart className="w-5 h-5 text-sky-500" />
-            Deep Clustering Visualizations Gallery
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Examine Elbow criteria, per-cluster silhouette profiles, hierarchical dendrograms, and feature heatmaps.
-          </p>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Control Bar */}
+      <div className="p-5 sm:p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center font-bold">
+            <PieChart className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Visualizations & Diagnostic Curves
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Interactive parameter sweeps, dendrograms, silhouette profiles, and correlation matrices
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-500">Clusters (k):</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Algorithm Selector */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-slate-500 font-medium">Model:</span>
+            <select
+              value={selectedAlg}
+              onChange={(e) => setSelectedAlg(e.target.value)}
+              className="bg-slate-50 dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              {ALGORITHM_OPTIONS.map((alg) => (
+                <option key={alg.id} value={alg.id}>
+                  {alg.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Clusters Input */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-slate-500 font-medium">k =</span>
             <input
               type="number"
               min="2"
               max="10"
               value={kClusters}
               onChange={(e) => setKClusters(e.target.value)}
-              className="w-12 bg-slate-50 dark:bg-slate-800 font-mono font-bold text-center px-1.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+              className="w-14 bg-slate-50 dark:bg-slate-800 font-mono font-bold text-center px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
+
+          {/* Refresh Action */}
           <button
             onClick={() => {
               fetchVisualizations();
               fetchParameterSweep();
             }}
-            disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white transition disabled:opacity-60"
+            disabled={loading || loadingSweep}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white transition disabled:opacity-60 shadow-xs cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${(loading || loadingSweep) ? 'animate-spin' : ''}`} />
+            <span>Update</span>
           </button>
         </div>
       </div>
@@ -195,21 +234,28 @@ export default function VisualizationsGallery({
       {/* Row 1: Elbow Method & Silhouette vs K Sweep */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Elbow Curve */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
               <TrendingDown className="w-4 h-4 text-sky-500" />
-              Elbow Method: Within-Cluster Sum of Squares (WCSS)
-            </h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Elbow Criterion (WCSS / Inertia)
+              </h3>
+              <Tooltip
+                title="Elbow Inflection Method"
+                formula="WCSS = Σ_k Σ_{x ∈ C_k} ||x - μ_k||²"
+                content="Detects the point where adding clusters yields diminishing returns in intra-cluster variance reduction. The sharpest curve bend signifies optimal partition compactness."
+                position="top"
+              >
+                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-sky-500 cursor-pointer transition" />
+              </Tooltip>
+            </div>
             {sweepData?.recommended_k && (
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
-                Suggested k = {sweepData.recommended_k}
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                Elbow k = {sweepData.recommended_k}
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Identifies the inflection point (elbow) where diminishing returns in variance reduction occur.
-          </p>
 
           <div className="w-full h-72">
             <PlotlyChart
@@ -219,14 +265,14 @@ export default function VisualizationsGallery({
                   y: sweepData?.inertias || [1000, 700, 500, 420, 370, 340, 315],
                   type: 'scatter',
                   mode: 'lines+markers',
-                  marker: { color: '#0284c7', size: 8 },
+                  marker: { color: '#0284c7', size: 7 },
                   line: { color: '#0284c7', width: 2.5 }
                 }
               ]}
               layout={{
-                xaxis: { title: 'Number of Clusters (k)', dtick: 1 },
+                xaxis: { title: 'Clusters (k)', dtick: 1 },
                 yaxis: { title: 'Inertia / WCSS' },
-                margin: { l: 50, r: 20, t: 20, b: 40 }
+                margin: { l: 50, r: 20, t: 15, b: 40 }
               }}
               isDark={isDark}
             />
@@ -234,14 +280,28 @@ export default function VisualizationsGallery({
         </div>
 
         {/* Silhouette Score vs K */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-500" />
-            Silhouette Analysis vs. Cluster Count (k)
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Global silhouette score evaluated across candidate k values. The maximum represents optimal separation.
-          </p>
+        <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Global Silhouette vs. Cluster Count
+              </h3>
+              <Tooltip
+                title="Global Silhouette Profile"
+                formula="s(i) = (b(i) - a(i)) / max(a(i), b(i))"
+                content="Measures individual sample cohesion relative to neighboring cluster separation. Peak bar height indicates the k value that maximizes separation distinctness."
+                position="top"
+              >
+                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-500 cursor-pointer transition" />
+              </Tooltip>
+            </div>
+            {peakSilhouetteK && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold border border-sky-500/20">
+                Peak k = {peakSilhouetteK}
+              </span>
+            )}
+          </div>
 
           <div className="w-full h-72">
             <PlotlyChart
@@ -257,9 +317,9 @@ export default function VisualizationsGallery({
                 }
               ]}
               layout={{
-                xaxis: { title: 'Number of Clusters (k)', dtick: 1 },
+                xaxis: { title: 'Clusters (k)', dtick: 1 },
                 yaxis: { title: 'Silhouette Score', range: [0, 1] },
-                margin: { l: 50, r: 20, t: 20, b: 40 }
+                margin: { l: 50, r: 20, t: 15, b: 40 }
               }}
               isDark={isDark}
             />
@@ -270,28 +330,35 @@ export default function VisualizationsGallery({
       {/* Row 2: Per-Cluster Silhouette Plot & Dendrogram */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Silhouette Plot */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
               <Layers className="w-4 h-4 text-amber-500" />
-              Per-Cluster Silhouette Analysis Diagram
-            </h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Per-Cluster Silhouette Profiles
+              </h3>
+              <Tooltip
+                title="Cluster Thickness & Silhouette"
+                formula="Dashed Line: Dataset Average"
+                content="Thickness of silhouette knives reflects cluster size. Knives extending well past the red dashed threshold represent dense, cohesive clusters without spillover."
+                position="top"
+              >
+                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-amber-500 cursor-pointer transition" />
+              </Tooltip>
+            </div>
             {vizData?.silhouette_plot?.average_silhouette !== undefined && (
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold">
-                Avg: {vizData.silhouette_plot.average_silhouette}
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/20">
+                Mean s = {vizData.silhouette_plot.average_silhouette}
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Horizontal silhouette coefficients per sample. Uniform cluster thickness indicates balanced clustering.
-          </p>
 
           <div className="w-full h-80">
             <PlotlyChart
               data={getSilhouettePlotData()}
               layout={{
-                xaxis: { title: 'Silhouette Coefficient values', range: [-0.1, 1.0] },
-                yaxis: { title: 'Sample Index (Grouped)', showticklabels: false },
+                xaxis: { title: 'Silhouette Coefficient', range: [-0.1, 1.0] },
+                yaxis: { title: 'Samples (Grouped)', showticklabels: false },
                 shapes: [
                   {
                     type: 'line',
@@ -303,7 +370,7 @@ export default function VisualizationsGallery({
                     line: { color: '#ef4444', width: 2, dash: 'dash' }
                   }
                 ],
-                margin: { l: 45, r: 20, t: 20, b: 40 }
+                margin: { l: 45, r: 20, t: 15, b: 40 }
               }}
               isDark={isDark}
             />
@@ -311,22 +378,34 @@ export default function VisualizationsGallery({
         </div>
 
         {/* Dendrogram */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-            <GitBranch className="w-4 h-4 text-indigo-500" />
-            Hierarchical Dendrogram Tree (Ward Linkage)
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Tree diagram representing progressive pairwise agglomeration of multi-dimensional instances.
-          </p>
+        <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <GitBranch className="w-4 h-4 text-indigo-500" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Hierarchical Dendrogram
+              </h3>
+              <Tooltip
+                title="Ward Linkage Agglomeration"
+                formula="d(A, B) = min-variance pairwise distance"
+                content="Tree representation of bottom-up hierarchical agglomeration. Vertical U-stem height corresponds to cophenetic distance between merged clusters."
+                position="top"
+              >
+                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-indigo-500 cursor-pointer transition" />
+              </Tooltip>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20">
+              Ward Linkage
+            </span>
+          </div>
 
           <div className="w-full h-80">
             <PlotlyChart
               data={getDendrogramData()}
               layout={{
-                xaxis: { title: 'Sample Leaves Index', showticklabels: false },
+                xaxis: { title: 'Sample Instances', showticklabels: false },
                 yaxis: { title: 'Linkage Distance' },
-                margin: { l: 45, r: 20, t: 20, b: 40 }
+                margin: { l: 45, r: 20, t: 15, b: 40 }
               }}
               isDark={isDark}
             />
@@ -337,20 +416,32 @@ export default function VisualizationsGallery({
       {/* Row 3: Feature Correlation Matrix Heatmap & Cluster Centroid Profiles */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Correlation Heatmap */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-            <Grid className="w-4 h-4 text-sky-500" />
-            Feature Correlation Matrix Heatmap
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Pairwise Pearson correlation coefficients between the top attributes in the preprocessed feature space.
-          </p>
+        <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Grid className="w-4 h-4 text-sky-500" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Feature Correlation Heatmap
+              </h3>
+              <Tooltip
+                title="Pairwise Pearson Correlation"
+                formula="r = Cov(X, Y) / (σ_X · σ_Y)"
+                content="Detects linear dependencies across key preprocessed attributes. High correlation flags redundant dimensions suitable for PCA reduction."
+                position="top"
+              >
+                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-sky-500 cursor-pointer transition" />
+              </Tooltip>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold border border-sky-500/20">
+              Pearson r
+            </span>
+          </div>
 
           <div className="w-full h-80">
             <PlotlyChart
               data={getCorrelationHeatmapData()}
               layout={{
-                margin: { l: 70, r: 20, t: 20, b: 70 },
+                margin: { l: 70, r: 20, t: 15, b: 70 },
                 xaxis: { tickangle: -45 }
               }}
               isDark={isDark}
@@ -359,20 +450,32 @@ export default function VisualizationsGallery({
         </div>
 
         {/* Cluster Centroid Profile Heatmap */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-500" />
-            Cluster Feature Profile Heatmap (Centroids)
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            Mean normalized feature values per cluster, revealing distinct phenotypic or physiological signatures.
-          </p>
+        <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                Cluster Centroid Profiles
+              </h3>
+              <Tooltip
+                title="Normalized Centroid Signatures"
+                formula="μ_{k,j} = 1/|C_k| · Σ x_{i,j}"
+                content="Standardized mean expression levels per cluster. Visualizes the exact morphological or statistical traits that distinguish each group."
+                position="top"
+              >
+                <Info className="w-3.5 h-3.5 text-slate-400 hover:text-emerald-500 cursor-pointer transition" />
+              </Tooltip>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+              Centroid Means
+            </span>
+          </div>
 
           <div className="w-full h-80">
             <PlotlyChart
               data={getClusterProfileHeatmapData()}
               layout={{
-                margin: { l: 70, r: 20, t: 20, b: 70 },
+                margin: { l: 70, r: 20, t: 15, b: 70 },
                 xaxis: { tickangle: -45 }
               }}
               isDark={isDark}

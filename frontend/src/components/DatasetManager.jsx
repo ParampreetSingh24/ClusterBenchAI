@@ -9,8 +9,11 @@ import {
   Filter,
   RefreshCw,
   Search,
-  Sparkles
+  Info,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 export default function DatasetManager({
   datasets,
@@ -27,7 +30,7 @@ export default function DatasetManager({
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
 
-  // Preprocessing options state
+  // Preprocessing options
   const [missingStrategy, setMissingStrategy] = useState('most_frequent');
   const [encodingStrategy, setEncodingStrategy] = useState('one_hot');
   const [scalingMethod, setScalingMethod] = useState('standard');
@@ -38,7 +41,10 @@ export default function DatasetManager({
   const [kBest, setKBest] = useState(10);
   const [subsampleLimit, setSubsampleLimit] = useState(2500);
 
-  // Fetch dataset preview whenever activeDatasetId changes
+  // Table pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 15;
+
   useEffect(() => {
     if (!activeDatasetId) return;
     setLoadingPreview(true);
@@ -47,6 +53,7 @@ export default function DatasetManager({
       .then((data) => {
         setPreview(data);
         setLoadingPreview(false);
+        setCurrentPage(1);
       })
       .catch((err) => {
         console.error('Error fetching preview:', err);
@@ -123,26 +130,29 @@ export default function DatasetManager({
     )
   );
 
+  const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
+  const paginatedRows = filteredRows.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header & Dataset Selector */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Database className="w-5 h-5 text-sky-500" />
-              Dataset Manager & Preprocessing Studio
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Database className="w-4 h-4 text-sky-500" />
+              Dataset Selector
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Select built-in benchmark datasets or upload custom CSV, Excel, or ARFF data files.
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              Choose a preloaded benchmark or upload a custom CSV, Excel, or ARFF file.
             </p>
           </div>
 
-          {/* File Upload Button */}
+          {/* Upload Button */}
           <div>
-            <label className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white cursor-pointer shadow-sm transition">
-              <Upload className="w-4 h-4" />
-              <span>{uploadLoading ? 'Uploading...' : 'Upload Dataset (CSV/XLSX/ARFF)'}</span>
+            <label className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white cursor-pointer shadow-sm transition">
+              <Upload className="w-3.5 h-3.5" />
+              <span>{uploadLoading ? 'Uploading...' : 'Upload Dataset'}</span>
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls,.arff"
@@ -159,190 +169,243 @@ export default function DatasetManager({
           </div>
         </div>
 
-        {/* Dataset Choice Cards */}
+        {/* Dataset Choice Cards with Hover Tooltips */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {datasets.map((ds) => {
             const isSelected = activeDatasetId === ds.id;
             return (
-              <button
+              <Tooltip
                 key={ds.id}
-                onClick={() => setActiveDatasetId(ds.id)}
-                className={`p-4 rounded-xl text-left border transition-all ${
-                  isSelected
-                    ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-500 ring-2 ring-sky-500/20'
-                    : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                }`}
+                title={ds.name}
+                content={ds.description}
+                position="top"
+                width="w-72"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-xs text-slate-900 dark:text-white capitalize">
-                    {ds.name}
-                  </span>
-                  {isSelected && <CheckCircle2 className="w-4 h-4 text-sky-500 shrink-0" />}
+                <div
+                  onClick={() => setActiveDatasetId(ds.id)}
+                  className={`w-full p-4 rounded-xl text-left border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-sky-500/10 dark:bg-sky-950/60 border-sky-500 ring-2 ring-sky-500/20'
+                      : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white capitalize">
+                      {ds.name.split('(')[0].trim()}
+                    </span>
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-sky-500 shrink-0" />}
+                  </div>
+
+                  <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {ds.num_rows?.toLocaleString()} rows
+                    </span>
+                    <span>•</span>
+                    <span>{ds.num_cols} features</span>
+                    <span>•</span>
+                    <span className="text-sky-500 font-bold">k = {ds.default_k}</span>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">
-                  {ds.description}
-                </p>
-                <div className="flex items-center gap-3 text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                  <span>{ds.num_rows?.toLocaleString()} rows</span>
-                  <span>•</span>
-                  <span>{ds.num_cols} cols</span>
-                  <span>•</span>
-                  <span>k = {ds.default_k}</span>
-                </div>
-              </button>
+              </Tooltip>
             );
           })}
         </div>
       </div>
 
-      {/* Dataset Statistics Panel */}
+      {/* Dataset Statistics Matrix */}
       {preview && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-1">Total Instances (N)</div>
-            <div className="text-xl font-extrabold text-slate-900 dark:text-white font-mono">
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Samples (N)</div>
+            <div className="text-xl font-black text-slate-900 dark:text-white font-mono mt-0.5">
               {summary.num_rows?.toLocaleString()}
             </div>
-            <div className="text-[10px] text-slate-400 mt-1">Data observations</div>
+            <div className="text-[10.5px] text-slate-400">Total instances</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-1">Feature Dimension (D)</div>
-            <div className="text-xl font-extrabold text-sky-600 dark:text-sky-400 font-mono">
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Dimensions (D)</div>
+            <div className="text-xl font-black text-sky-600 dark:text-sky-400 font-mono mt-0.5">
               {summary.num_cols}
             </div>
-            <div className="text-[10px] text-slate-400 mt-1">Attributes / measurements</div>
+            <div className="text-[10.5px] text-slate-400">Input attributes</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-1">Missing Cells</div>
-            <div className={`text-xl font-extrabold font-mono ${summary.total_missing_cells > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Missing Values</div>
+            <div className={`text-xl font-black font-mono mt-0.5 ${summary.total_missing_cells > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
               {summary.total_missing_cells}
             </div>
-            <div className="text-[10px] text-slate-400 mt-1">Requiring imputation</div>
+            <div className="text-[10.5px] text-slate-400">{summary.total_missing_cells > 0 ? 'Imputation applied' : 'Complete matrix'}</div>
           </div>
 
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mb-1">Ground Truth Class</div>
-            <div className="text-sm font-bold text-slate-900 dark:text-white font-mono truncate">
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Ground Truth</div>
+            <div className="text-sm font-bold text-slate-900 dark:text-white font-mono truncate mt-1">
               {summary.detected_target || 'None (Unsupervised)'}
             </div>
-            <div className="text-[10px] text-slate-400 mt-1">
-              {summary.detected_target ? 'Purity & ARI enabled' : 'Internal validation only'}
+            <div className="text-[10.5px] text-slate-400">
+              {summary.detected_target ? 'Purity & ARI active' : 'Internal validation'}
             </div>
           </div>
         </div>
       )}
 
       {/* Preprocessing Controls Configuration */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
+      <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md space-y-4">
+        <div className="flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Sliders className="w-4 h-4 text-sky-500" />
-              Interactive Data Preprocessing Pipeline
+              Preprocessing Pipeline
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Configure imputation, encoding, feature scaling, outlier filtering, and dimensionality selection.
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+              Hover over step labels for advice on categorical data, scalers, and outlier handling.
             </p>
           </div>
+
           <button
             onClick={handleApplyPreprocessing}
             disabled={isPreprocessing}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-500/20 transition disabled:opacity-60"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-500/20 transition disabled:opacity-60 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isPreprocessing ? 'animate-spin' : ''}`} />
-            <span>{isPreprocessing ? 'Processing Pipeline...' : 'Apply Preprocessing'}</span>
+            <span>{isPreprocessing ? 'Applying Pipeline...' : 'Apply Pipeline'}</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Missing Value Handling */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              1. Missing Value Imputation
-            </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          {/* Missing Values */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                1. Missing Values
+              </label>
+              <Tooltip
+                title="Missing Value Handling"
+                content="Mode imputation is recommended for categorical data (e.g. Mushroom, Soybean) to preserve discrete states."
+                position="top"
+              >
+                <Info className="w-3 h-3 text-slate-400 cursor-pointer hover:text-sky-500" />
+              </Tooltip>
+            </div>
             <select
               value={missingStrategy}
               onChange={(e) => setMissingStrategy(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
             >
-              <option value="most_frequent">Most Frequent (Mode - Recommended for Categorical)</option>
-              <option value="mean">Mean (Continuous Attributes)</option>
-              <option value="median">Median (Robust to Skewness)</option>
+              <option value="most_frequent">Most Frequent (Mode - Categorical default)</option>
+              <option value="mean">Mean (Continuous variables)</option>
+              <option value="median">Median (Skew-resistant)</option>
               <option value="drop_rows">Drop Incomplete Rows</option>
-              <option value="constant">Constant (Zero / 'missing')</option>
+              <option value="constant">Constant (Zero)</option>
             </select>
           </div>
 
           {/* Categorical Encoding */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              2. Categorical Encoding
-            </label>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                2. Categorical Encoding
+              </label>
+              <Tooltip
+                title="Encoding Strategy"
+                content="One-Hot encoding prevents artificial numeric ordering in nominal attributes by projecting them into orthogonal binary spaces."
+                position="top"
+              >
+                <Info className="w-3 h-3 text-slate-400 cursor-pointer hover:text-sky-500" />
+              </Tooltip>
+            </div>
             <select
               value={encodingStrategy}
               onChange={(e) => setEncodingStrategy(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
             >
-              <option value="one_hot">One-Hot Encoding (Binary Sparsity)</option>
-              <option value="label">Label Encoding (Ordinal Integers)</option>
+              <option value="one_hot">One-Hot Encoding (Binary vectors)</option>
+              <option value="label">Label Encoding (Ordinal numbers)</option>
             </select>
           </div>
 
           {/* Feature Scaling */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              3. Feature Normalization / Scaling
-            </label>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                3. Feature Scaling
+              </label>
+              <Tooltip
+                title="Feature Normalization"
+                content="StandardScaler centers features to μ=0, σ=1, preventing high-variance attributes from skewing Euclidean distances."
+                position="top"
+              >
+                <Info className="w-3 h-3 text-slate-400 cursor-pointer hover:text-sky-500" />
+              </Tooltip>
+            </div>
             <select
               value={scalingMethod}
               onChange={(e) => setScalingMethod(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
             >
-              <option value="standard">StandardScaler (Zero Mean, Unit Variance)</option>
+              <option value="standard">StandardScaler (Mean = 0, Var = 1)</option>
               <option value="minmax">MinMaxScaler (Range [0, 1])</option>
               <option value="robust">RobustScaler (Median & IQR)</option>
-              <option value="none">No Scaling (Raw Scale)</option>
+              <option value="none">No Scaling (Raw values)</option>
             </select>
           </div>
 
           {/* Outlier Detection */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              4. Outlier Detection & Removal
-            </label>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                4. Outlier Filter
+              </label>
+              <Tooltip
+                title="Anomaly Mitigation"
+                content="Isolation Forest separates spatial anomalies via random binary partitioning trees, stabilizing centroid convergence."
+                position="top"
+              >
+                <Info className="w-3 h-3 text-slate-400 cursor-pointer hover:text-sky-500" />
+              </Tooltip>
+            </div>
             <select
               value={outlierMethod}
               onChange={(e) => setOutlierMethod(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
             >
-              <option value="none">None (Keep all instances)</option>
-              <option value="isolation_forest">Isolation Forest (Tree-Based)</option>
-              <option value="lof">Local Outlier Factor (LOF Density)</option>
-              <option value="zscore">Z-Score Filtering (|z| &gt; 3.5)</option>
+              <option value="none">None (Keep all points)</option>
+              <option value="isolation_forest">Isolation Forest (Tree-based)</option>
+              <option value="lof">Local Outlier Factor (Density)</option>
+              <option value="zscore">Z-Score (|z| &gt; 3.5)</option>
             </select>
           </div>
 
           {/* Feature Selection */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              5. Dimensionality & Feature Selection
-            </label>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                5. Feature Selection
+              </label>
+              <Tooltip
+                title="Dimensionality Reduction"
+                content="PCA projects high-dimensional correlated features into orthogonal principal axes preserving maximal variance."
+                position="top"
+              >
+                <Info className="w-3 h-3 text-slate-400 cursor-pointer hover:text-sky-500" />
+              </Tooltip>
+            </div>
             <select
               value={featureSelection}
               onChange={(e) => setFeatureSelection(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full text-xs px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
             >
-              <option value="none">All Extracted Features</option>
-              <option value="variance">Variance Threshold (Remove Constant)</option>
+              <option value="none">Retain All Features</option>
+              <option value="variance">Variance Threshold (Remove constants)</option>
               <option value="pca">Principal Component Analysis (PCA)</option>
               <option value="kbest">SelectKBest (ANOVA F-Test)</option>
             </select>
           </div>
 
-          {/* Subsample Limit for responsiveness */}
-          <div className="space-y-1.5">
+          {/* Max Samples */}
+          <div className="space-y-1">
             <div className="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
               <span>6. Max Sample Limit</span>
               <span className="font-mono text-sky-500">{subsampleLimit} rows</span>
@@ -354,79 +417,101 @@ export default function DatasetManager({
               step="500"
               value={subsampleLimit}
               onChange={(e) => setSubsampleLimit(e.target.value)}
-              className="w-full accent-sky-500"
+              className="w-full accent-sky-500 mt-2"
             />
           </div>
         </div>
       </div>
 
       {/* Raw Data Table Explorer */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div>
+      <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              Raw Dataset Explorer (First 50 Rows)
+              Data Matrix Preview
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Inspect attribute values, nominal codes, and class ground-truth distributions.
-            </p>
+            <span className="text-[11px] font-mono text-slate-400">
+              ({filteredRows.length} instances filtered)
+            </span>
           </div>
 
-          {/* Search Table */}
+          {/* Search Box */}
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Filter instances..."
+              placeholder="Search attributes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-xs pl-9 pr-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 w-64"
+              className="text-xs pl-8 pr-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-sky-500 w-56"
             />
           </div>
         </div>
 
         {loadingPreview ? (
-          <div className="py-16 text-center text-slate-400 text-xs">
-            <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-sky-500" />
-            Loading dataset instances...
+          <div className="py-12 text-center text-slate-400 text-xs">
+            <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-sky-500" />
+            Loading preview...
           </div>
         ) : (
-          <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
-            <table className="w-full text-[11px] text-left border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="py-2.5 px-3 font-mono text-slate-400">#</th>
-                  {columns.map((col) => (
-                    <th key={col} className="py-2.5 px-3 whitespace-nowrap">
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono">
-                {filteredRows.slice(0, 50).map((row, idx) => (
-                  <tr
-                    key={idx}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
-                  >
-                    <td className="py-2 px-3 text-slate-400 font-semibold">{idx + 1}</td>
+          <>
+            <div className="overflow-x-auto border border-slate-200/80 dark:border-slate-800 rounded-xl">
+              <table className="w-full text-[11px] text-left border-collapse font-mono">
+                <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="py-2 px-3 text-slate-400">#</th>
                     {columns.map((col) => (
-                      <td
-                        key={col}
-                        className={`py-2 px-3 whitespace-nowrap ${
-                          col === summary.detected_target
-                            ? 'font-bold text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/20'
-                            : 'text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {String(row[col] ?? '')}
-                      </td>
+                      <th key={col} className="py-2 px-3 whitespace-nowrap">
+                        {col}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-[10.5px]">
+                  {paginatedRows.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
+                      <td className="py-1.5 px-3 text-slate-400">{(currentPage - 1) * rowsPerPage + idx + 1}</td>
+                      {columns.map((col) => (
+                        <td
+                          key={col}
+                          className={`py-1.5 px-3 whitespace-nowrap ${
+                            col === summary.detected_target
+                              ? 'font-bold text-sky-600 dark:text-sky-400 bg-sky-50/40 dark:bg-sky-950/20'
+                              : 'text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {String(row[col] ?? '')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1 rounded bg-slate-100 dark:bg-slate-800 disabled:opacity-40 cursor-pointer"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

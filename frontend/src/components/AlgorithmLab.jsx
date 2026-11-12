@@ -10,9 +10,11 @@ import {
   Compass,
   Zap,
   Clock,
-  HardDrive
+  HardDrive,
+  Info
 } from 'lucide-react';
 import PlotlyChart from './PlotlyChart';
+import Tooltip from './Tooltip';
 
 export default function AlgorithmLab({
   activeDatasetId,
@@ -151,11 +153,11 @@ export default function AlgorithmLab({
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Header & Algorithm Selector */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Sliders className="w-5 h-5 text-sky-500" />
+              <Sliders className="w-5 h-5 text-cyan-500" />
               Interactive Algorithm Lab & Parameter Studio
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -166,7 +168,7 @@ export default function AlgorithmLab({
           <button
             onClick={runAlgorithm}
             disabled={isRunning}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white shadow-md shadow-sky-500/20 transition disabled:opacity-60"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 via-sky-500 to-violet-600 hover:from-cyan-400 hover:to-violet-500 text-white shadow-lg shadow-cyan-500/25 transition disabled:opacity-60 cursor-pointer"
           >
             <Play className={`w-4 h-4 fill-current ${isRunning ? 'animate-spin' : ''}`} />
             <span>{isRunning ? 'Clustering...' : 'Execute Clustering'}</span>
@@ -174,7 +176,7 @@ export default function AlgorithmLab({
         </div>
 
         {/* Algorithm Tabs */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-1.5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs">
+        <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-1.5 p-1.5 rounded-2xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] text-xs">
           {[
             { id: 'kmeans', name: 'K-Means' },
             { id: 'kmedoids', name: 'K-Medoids' },
@@ -331,75 +333,121 @@ export default function AlgorithmLab({
         </div>
       </div>
 
-      {/* Metrics Row */}
+      {/* Metrics Row with Hover Tooltips */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="text-[10.5px] font-medium text-slate-400 dark:text-slate-500 mb-0.5">Silhouette Score</div>
-          <div className="text-lg font-extrabold text-sky-600 dark:text-sky-400 font-mono">
-            {metrics.silhouette_score !== null ? metrics.silhouette_score : 'N/A'}
+        <Tooltip
+          title="Silhouette Score"
+          formula="s(i) = [b(i) - a(i)] / max(a(i), b(i))"
+          content="Ranges [-1, +1]. Higher is better. Values above 0.5 indicate sharp, distinct cluster boundaries."
+          position="bottom"
+        >
+          <div className="w-full p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs cursor-pointer hover:border-sky-500/40 transition">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Silhouette</div>
+            <div className="text-lg font-black text-sky-600 dark:text-sky-400 font-mono">
+              {metrics.silhouette_score !== null && metrics.silhouette_score !== undefined ? metrics.silhouette_score : 'N/A'}
+            </div>
+            <div className="text-[9.5px] text-slate-400">[-1, 1] Separation</div>
           </div>
-          <div className="text-[9.5px] text-slate-400">[-1, 1] Higher is better</div>
-        </div>
+        </Tooltip>
 
-        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="text-[10.5px] font-medium text-slate-400 dark:text-slate-500 mb-0.5">Davies-Bouldin</div>
-          <div className="text-lg font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-            {metrics.davies_bouldin_index !== null ? metrics.davies_bouldin_index : 'N/A'}
+        <Tooltip
+          title="Davies-Bouldin Index"
+          formula="DB = (1/k) Σ max (s_i + s_j) / d(c_i, c_j)"
+          content="Ranges [0, ∞). Lower is better. 0 indicates perfect separation where clusters are tight and distant."
+          position="bottom"
+        >
+          <div className="w-full p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs cursor-pointer hover:border-emerald-500/40 transition">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Davies-Bouldin</div>
+            <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+              {metrics.davies_bouldin_index !== null && metrics.davies_bouldin_index !== undefined ? metrics.davies_bouldin_index : 'N/A'}
+            </div>
+            <div className="text-[9.5px] text-slate-400">Lower is better</div>
           </div>
-          <div className="text-[9.5px] text-slate-400">Lower is better</div>
-        </div>
+        </Tooltip>
 
-        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="text-[10.5px] font-medium text-slate-400 dark:text-slate-500 mb-0.5">Calinski-Harabasz</div>
-          <div className="text-lg font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
-            {metrics.calinski_harabasz_score !== null ? metrics.calinski_harabasz_score : 'N/A'}
+        <Tooltip
+          title="Calinski-Harabasz Score"
+          formula="CH = [SS_B / (k-1)] / [SS_W / (N-k)]"
+          content="Variance ratio criterion. Higher values indicate higher between-cluster variance relative to intra-cluster spread."
+          position="bottom"
+        >
+          <div className="w-full p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs cursor-pointer hover:border-indigo-500/40 transition">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Calinski-H</div>
+            <div className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">
+              {metrics.calinski_harabasz_score !== null && metrics.calinski_harabasz_score !== undefined ? metrics.calinski_harabasz_score : 'N/A'}
+            </div>
+            <div className="text-[9.5px] text-slate-400">Variance ratio</div>
           </div>
-          <div className="text-[9.5px] text-slate-400">Variance ratio</div>
-        </div>
+        </Tooltip>
 
-        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="text-[10.5px] font-medium text-slate-400 dark:text-slate-500 mb-0.5">Cluster Purity</div>
-          <div className="text-lg font-extrabold text-amber-500 font-mono">
-            {metrics.purity !== null ? `${(metrics.purity * 100).toFixed(1)}%` : 'N/A'}
+        <Tooltip
+          title="Cluster Purity"
+          formula="Purity = (1/N) Σ max |C_k ∩ L_j|"
+          content="Ranges [0, 1]. Measures percentage of samples matching dominant ground-truth class labels."
+          position="bottom"
+        >
+          <div className="w-full p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs cursor-pointer hover:border-amber-500/40 transition">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Purity</div>
+            <div className="text-lg font-black text-amber-500 font-mono">
+              {metrics.purity !== null && metrics.purity !== undefined ? `${(metrics.purity * 100).toFixed(1)}%` : 'N/A'}
+            </div>
+            <div className="text-[9.5px] text-slate-400">Ground-truth match</div>
           </div>
-          <div className="text-[9.5px] text-slate-400">Ground truth match</div>
-        </div>
+        </Tooltip>
 
-        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="text-[10.5px] font-medium text-slate-400 dark:text-slate-500 mb-0.5">Clusters Found</div>
-          <div className="text-lg font-extrabold text-slate-900 dark:text-white font-mono">
-            {metrics.n_clusters ?? 'N/A'}
+        <Tooltip
+          title="Cluster Partitions"
+          content="Number of discovered natural clusters. Noise points are segregated separately if supported by the model."
+          position="bottom"
+        >
+          <div className="w-full p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs cursor-pointer hover:border-sky-500/40 transition">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Clusters</div>
+            <div className="text-lg font-black text-slate-900 dark:text-white font-mono">
+              {metrics.n_clusters ?? 'N/A'}
+            </div>
+            <div className="text-[9.5px] text-slate-400">
+              {metrics.n_noise_points ? `${metrics.n_noise_points} noise` : 'Clean clusters'}
+            </div>
           </div>
-          <div className="text-[9.5px] text-slate-400">
-            {metrics.n_noise_points ? `${metrics.n_noise_points} noise pts` : 'No noise'}
-          </div>
-        </div>
+        </Tooltip>
 
-        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="text-[10.5px] font-medium text-slate-400 dark:text-slate-500 mb-0.5 flex items-center gap-1">
-            <Clock className="w-3 h-3 text-sky-500" /> Latency
+        <Tooltip
+          title="Execution Latency"
+          content="Wall-clock CPU execution time measured in milliseconds using Python's high-resolution performance counter."
+          position="bottom"
+        >
+          <div className="w-full p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs cursor-pointer hover:border-sky-500/40 transition">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-sky-500" /> Latency
+            </div>
+            <div className="text-lg font-black text-slate-900 dark:text-white font-mono">
+              {metrics.execution_time_ms} ms
+            </div>
+            <div className="text-[9.5px] text-slate-400">CPU compute time</div>
           </div>
-          <div className="text-lg font-extrabold text-slate-900 dark:text-white font-mono">
-            {metrics.execution_time_ms} ms
-          </div>
-          <div className="text-[9.5px] text-slate-400">CPU execution time</div>
-        </div>
+        </Tooltip>
 
-        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <div className="text-[10.5px] font-medium text-slate-400 dark:text-slate-500 mb-0.5 flex items-center gap-1">
-            <HardDrive className="w-3 h-3 text-emerald-500" /> Peak Memory
+        <Tooltip
+          title="Peak Heap Memory"
+          content="Maximum dynamic memory allocated on the heap during the fit-and-predict phase, tracked via Python tracemalloc."
+          position="bottom"
+        >
+          <div className="w-full p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs cursor-pointer hover:border-emerald-500/40 transition">
+            <div className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+              <HardDrive className="w-3 h-3 text-emerald-500" /> Peak RAM
+            </div>
+            <div className="text-lg font-black text-slate-900 dark:text-white font-mono">
+              {metrics.memory_kb} KB
+            </div>
+            <div className="text-[9.5px] text-slate-400">Heap allocation</div>
           </div>
-          <div className="text-lg font-extrabold text-slate-900 dark:text-white font-mono">
-            {metrics.memory_kb} KB
-          </div>
-          <div className="text-[9.5px] text-slate-400">RAM allocation</div>
-        </div>
+        </Tooltip>
       </div>
 
       {/* Main Visualizations Display */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Scatter Plot (2D/3D PCA & t-SNE) */}
-        <div className="lg:col-span-2 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div className="lg:col-span-2 p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -474,7 +522,7 @@ export default function AlgorithmLab({
         </div>
 
         {/* Cluster Size Distribution */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div className="p-6 rounded-3xl bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-md flex flex-col justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
               <BarChart2 className="w-4 h-4 text-emerald-500" />
